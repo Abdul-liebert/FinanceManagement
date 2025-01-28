@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authmiddleware');
 const {
+getFinancesByDate,
   getFinances,
   createFinance,
   updateFinance,
@@ -10,6 +11,7 @@ const {
 } = require('../controllers/financeController');
 
 // Route untuk mendapatkan semua data finance
+router.get('/filter', protect, getFinancesByDate);
 router.get('/', protect, getFinances);
 
 // Route untuk membuat data finance baru
