@@ -12,7 +12,10 @@ getFinancesByDate,
 
 // Route untuk mendapatkan semua data finance
 router.get('/filter', protect, getFinancesByDate);
+
 router.get('/', protect, getFinances);
+
+router.get('/filter', protect, filterFinance);
 
 // Route untuk membuat data finance baru
 router.post('/', protect, createFinance);
