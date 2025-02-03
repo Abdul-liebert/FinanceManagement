@@ -20,6 +20,11 @@ const financeSchema = new mongoose.Schema(
             required: [true, 'type is required'],
             enum: ['income', 'expense']
         },
+        category: {
+            type: String,
+            required: true,
+            enum: ["food","transportation","entertainment","utilities","others"]
+        }
 
     },
     {
