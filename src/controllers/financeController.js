@@ -107,9 +107,9 @@ const deleteFinance = async (req, res) => {
 const filterFinance = async (req, res) => {
     try {
         const userId = req.user_id
-        const {type, month, year} = req.query;
+        const { type, month, year } = req.query;
 
-        let query = {user: userId};
+        let query = { user: userId };
 
         if (type) {
             query.type = type
@@ -117,29 +117,48 @@ const filterFinance = async (req, res) => {
 
         if (year) {
             const startYear = new Date(`${year}-01-01T00:00:00.000Z`)
-            const endYear = new Date(`${Number(year)+1}-01-01T00:00:00.000Z`)
-            query.createdAt = {$gte: startOfYear, $lt:endOfYear};
+            const endYear = new Date(`${Number(year) + 1}-01-01T00:00:00.000Z`)
+            query.createdAt = { $gte: startOfYear, $lt: endOfYear };
         }
 
 
-        if(month){
-            if(!query.createdAt){
-                query.createdAt={};
+        if (month) {
+            if (!query.createdAt) {
+                query.createdAt = {};
             }
             const yearValue = year || new Date().getFullYear();
             const monthStart = new Date(`${yearValue}-${String(month).padStart(2, '0')}`)
-            const nextmonth = Number(month)+1
+            const nextmonth = Number(month) + 1
             const monthEnd = nextmonth > 12
-                ? new Date(`${Number(yearValue)+1}-01-01T00:00:00.000Z`)
+                ? new Date(`${Number(yearValue) + 1}-01-01T00:00:00.000Z`)
                 : new Date(`${yearValue}-${String(nextmonth).padStart(2, '0')}`)
         }
 
-        const finances = await Finance.find(query).sort({createdAt: -1})
+        const finances = await Finance.find(query).sort({ createdAt: -1 })
         res.status(200).json(finances)
     } catch (error) {
-        res.status(500).jspn({message: error.message})
+        res.status(500).jspn({ message: error.message })
     }
-} 
+}
 
+const getFinanceSummary = async (req, res) => {
+    try {
+        const userId = req.user._id
+        const finances = await Finance.find({ user: userId })
+        const totalIncome = finances
+            .filter((item) => item.type === 'income')
+            .reduce((acc, curr) => acc + curr.amount, 0)
 
-module.exports = { getFinances, createFinance, updateFinance, deleteFinance, getFinancesByDate};
+        const balance = totalIncome - totalExpense
+
+        res.status(200).json({
+            totalIncome,
+            totalExpense,
+            balance
+        })
+    } catch (error) {
+        res.status(500).json({message: error.message})
+    }
+}
+
+module.exports = { getFinances, createFinance, updateFinance, deleteFinance, getFinancesByDate };
