@@ -12,25 +12,6 @@ const getFinances = async (req, res) => {
     }
 };
 
-const getFinancesByDate = async (req, res) => {
-    try {
-        const { startDate, endDate } = req.query
-
-        const filter = { user: req.user.id }
-
-        if (startDate || endDate) {
-            filter.createdAt = {};
-            if (startDate) filter.createdAt.$gte = new Date(startDate)
-            if (endDate) filter.createdAt.$lte = new Date(endDate)
-        }
-
-        const finances = await Finance.find({ user: req.user.id });
-        res.status(200).json(finances);
-    } catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}
-
 // Controller untuk membuat data finance baru
 const createFinance = async (req, res) => {
     const { title, amount, type } = req.body;
@@ -106,40 +87,43 @@ const deleteFinance = async (req, res) => {
 // Controller untuk fiter finance
 const filterFinance = async (req, res) => {
     try {
-        const userId = req.user_id
+        const userId = req.user.id;
         const { type, month, year } = req.query;
 
         let query = { user: userId };
 
         if (type) {
-            query.type = type
+            query.type = type;
         }
 
         if (year) {
-            const startYear = new Date(`${year}-01-01T00:00:00.000Z`)
-            const endYear = new Date(`${Number(year) + 1}-01-01T00:00:00.000Z`)
-            query.createdAt = { $gte: startOfYear, $lt: endOfYear };
+            const startYear = new Date(`${year}-01-01T00:00:00.000Z`);
+            const endYear = new Date(`${Number(year) + 1}-01-01T00:00:00.000Z`);
+            query.createdAt = { $gte: startYear, $lt: endYear };
         }
-
 
         if (month) {
             if (!query.createdAt) {
                 query.createdAt = {};
             }
-            const yearValue = year || new Date().getFullYear();
-            const monthStart = new Date(`${yearValue}-${String(month).padStart(2, '0')}`)
-            const nextmonth = Number(month) + 1
-            const monthEnd = nextmonth > 12
+            const yearValue = year ? Number(year) : new Date().getFullYear();
+
+            const monthStart = new Date(`${yearValue}-${String(month).padStart(2, '0')}-01T00:00:00.000Z`);
+            const nextMonth = Number(month) + 1;
+            const monthEnd = nextMonth > 12
                 ? new Date(`${Number(yearValue) + 1}-01-01T00:00:00.000Z`)
-                : new Date(`${yearValue}-${String(nextmonth).padStart(2, '0')}`)
+                : new Date(`${yearValue}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`);
+            
+            query.createdAt.$gte = monthStart;
+            query.createdAt.$lt = monthEnd;
         }
 
-        const finances = await Finance.find(query).sort({ createdAt: -1 })
-        res.status(200).json(finances)
+        const finances = await Finance.find(query).sort({ createdAt: -1 });
+        res.status(200).json(finances);
     } catch (error) {
-        res.status(500).jspn({ message: error.message })
+        res.status(500).json({ message: error.message });
     }
-}
+};
 
 const getFinanceSummary = async (req, res) => {
     try {
@@ -147,6 +131,9 @@ const getFinanceSummary = async (req, res) => {
         const finances = await Finance.find({ user: userId })
         const totalIncome = finances
             .filter((item) => item.type === 'income')
+            .reduce((acc, curr) => acc + curr.amount, 0)
+        const totalExpense = finances
+            .filter((item) => item.type === 'expense')
             .reduce((acc, curr) => acc + curr.amount, 0)
 
         const balance = totalIncome - totalExpense
@@ -157,8 +144,8 @@ const getFinanceSummary = async (req, res) => {
             balance
         })
     } catch (error) {
-        res.status(500).json({message: error.message})
+        res.status(500).json({ message: error.message })
     }
 }
 
-module.exports = { getFinances, createFinance, updateFinance, deleteFinance, getFinancesByDate };
+module.exports = { getFinances, createFinance, updateFinance, deleteFinance, filterFinance, getFinanceSummary };
