@@ -7,6 +7,7 @@ const {
 filterFinance,
 getFinanceSummary,
   getFinances,
+  getCategoryStats,
   createFinance,
   updateFinance,
   deleteFinance,
@@ -18,6 +19,8 @@ router.get('/', protect, getFinances);
 router.get('/filters', protect, filterFinance);
 
 router.get('/summary', protect, getFinanceSummary);
+
+router.get('/stats', protect, getCategoryStats)
 
 // Route untuk membuat data finance baru
 router.post('/', protect, createFinance);

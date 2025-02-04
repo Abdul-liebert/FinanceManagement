@@ -14,12 +14,22 @@ const getFinances = async (req, res) => {
 
 // Controller untuk membuat data finance baru
 const createFinance = async (req, res) => {
-    const { title, amount, type } = req.body;
+    const { title, amount, type, category } = req.body;
 
     // Validasi input
-    if (!title || !amount || !type) {
+    if (!title || !amount || !type || !category) {
         return res.status(400).json({ message: 'Semua field harus diisi' });
     }
+
+    if (!['income', 'expense'].includes(type)) {
+        return res.status(400).json({ message: 'Tipe harus income & expense' })
+    }
+
+    if (!["food", "transportation", "entertainment", "utilities", "others"].includes(category)) {
+        return res.status(400).json({ message: 'Kategori harus salary, food, transportation, entertainment, utilities, others' })
+    }
+
+
 
     try {
         // Buat data finance baru
@@ -28,6 +38,7 @@ const createFinance = async (req, res) => {
             title,
             amount,
             type,
+            category
         });
 
         res.status(201).json(finance);
@@ -35,6 +46,25 @@ const createFinance = async (req, res) => {
         res.status(500).json({ message: 'Gagal membuat data finance' });
     }
 };
+
+const getCategoryStats = async (req, res) => {
+    try {
+        const finances = await Finance.find({ user: req.user.id })
+
+        const categoryStats = finances.reduce((acc, curr) => {
+            if (!acc[curr.category]) {
+                acc[curr.category] = { total: 0, count: 0 }
+            }
+            acc[curr.category].total += curr.amount
+            acc[curr.category].count += 1
+            return acc
+        }, {})
+
+        res.status(200).json(categoryStats)
+    } catch (error) {
+        res.status(500).json({message: 'Gagal memuat statistik kategori'})
+    }   
+}
 
 // Controller untuk mengupdate data finance
 const updateFinance = async (req, res) => {
@@ -113,7 +143,7 @@ const filterFinance = async (req, res) => {
             const monthEnd = nextMonth > 12
                 ? new Date(`${Number(yearValue) + 1}-01-01T00:00:00.000Z`)
                 : new Date(`${yearValue}-${String(nextMonth).padStart(2, '0')}-01T00:00:00.000Z`);
-            
+
             query.createdAt.$gte = monthStart;
             query.createdAt.$lt = monthEnd;
         }
@@ -148,4 +178,4 @@ const getFinanceSummary = async (req, res) => {
     }
 }
 
-module.exports = { getFinances, createFinance, updateFinance, deleteFinance, filterFinance, getFinanceSummary };
+module.exports = { getFinances, createFinance, updateFinance, deleteFinance, filterFinance, getFinanceSummary, getCategoryStats };
