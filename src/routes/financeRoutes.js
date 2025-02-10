@@ -11,13 +11,17 @@ getFinanceSummary,
   createFinance,
   updateFinance,
   deleteFinance,
-  getMonthlyStats
+  getMonthlyStats,
+  getFinanceReportByPeriod
 } = require('../controllers/financeController');
 
 
 router.get('/', protect, getFinances);
 
 router.get('/monthly-stats', protect, getMonthlyStats)
+
+router.get('/router', protect, getFinanceReportByPeriod)
+
 router.get('/filters', protect, filterFinance);
 
 router.get('/summary', protect, getFinanceSummary);

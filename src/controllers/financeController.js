@@ -71,6 +71,49 @@ const getCategoryStats = async (req, res) => {
     }
 }
 
+const getFinanceReportByPeriod = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const { startDate, endDate } = req.query
+        
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Tanggal mulai dan tanggal akhir haruss' })
+        }
+
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            return res.status(400).json({message: 'Format Tanggal tidak Valid'})
+        }
+
+        if (start > end) {
+            return res.status(400).json({message: 'tanggal mulai harus sebelum tanggal'})
+        }
+
+        const finances = await Finance.find({
+            user: userId,
+            createdAt: {$gte:startDate,$lt:endDate}
+        })
+
+        const totalIncome = finances
+            .filter((item) => item.type === 'income')
+            .reduce((acc, curr)=> acc + curr.amount, 0)
+
+        const balance = totalIncome - totalExpense
+
+        res.status(200).json({
+            startDate,
+            endDate,
+            totalIncome,
+            totalExpense,
+            balance
+        })
+    } catch (error) {
+        res.status(500).json({message: 'Terjadi kesalahan server'})
+    }
+}
+
 // Controller untuk membuat data finance baru
 const createFinance = async (req, res) => {
     const { title, amount, type, category } = req.body;
@@ -200,6 +243,12 @@ const filterFinance = async (req, res) => {
             query.createdAt.$lt = monthEnd;
         }
 
+        if (minAmount || maxAmount) {
+            query.amount = {}
+            if (minAmount) query.amount.$gte = Number(minAmount);
+            if (maxAmount) query.amount.$lte = Number(maxAmount);
+        }
+
         if (keyword) {
             query.$or = [
                 { title: { $regex: keyword, $options: 'i' } },
@@ -249,4 +298,4 @@ const getFinanceSummary = async (req, res) => {
     }
 }
 
-module.exports = { getFinances, getMonthlyStats, createFinance, updateFinance, deleteFinance, filterFinance, getFinanceSummary, getCategoryStats };
+module.exports = { getFinances, getMonthlyStats, getFinanceReportByPeriod, createFinance, updateFinance, deleteFinance, filterFinance, getFinanceSummary, getCategoryStats };
