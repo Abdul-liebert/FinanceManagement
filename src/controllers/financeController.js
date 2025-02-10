@@ -12,6 +12,65 @@ const getFinances = async (req, res) => {
     }
 };
 
+const getMonthlyStats = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const { year } = req.query
+
+        if (!year) {
+            return res.status(400).json({ message: "Tahun harus disertakan dalam query" })
+        }
+
+        const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`)
+        const endOfYear = new Date(`${Number(year) + 1}-01-01T00:00:00.000Z`)
+
+        const finances = await Finance.find({
+            user: userId,
+            createdAt: { $gte: startOfYear, $lt: endOfYear }
+        })
+
+        const monthlyStats = Array.from({ length: 12 }, (_, i) => ({
+            month: i + 1,
+            totalIncome: 0,
+            totalExpense: 0,
+            balance: 0
+        }))
+
+        finances.forEach((item) => {
+            const monthIndex = item.createdAt.getUTCMonth()
+            if (item.type === 'income') {
+                monthlyStats[monthIndex].totalIncome += item.amount
+            } else if (item.type === 'expense') {
+                monthlyStats[monthIndex].totalExpense += item.amount
+            }
+            monthlyStats[monthIndex].balance =
+                monthlyStats[monthIndex].totalIncome - monthlyStats[monthIndex].totalExpense;
+        })
+        res.status(200).json(monthlyStats)
+    } catch (error) {
+        res.statys(500).json({ message: error.message })
+    }
+}
+
+const getCategoryStats = async (req, res) => {
+    try {
+        const finances = await Finance.find({ user: req.user.id })
+
+        const categoryStats = finances.reduce((acc, curr) => {
+            if (!acc[curr.category]) {
+                acc[curr.category] = { total: 0, count: 0 }
+            }
+            acc[curr.category].total += curr.amount
+            acc[curr.category].count += 1
+            return acc
+        }, {})
+
+        res.status(200).json(categoryStats)
+    } catch (error) {
+        res.status(500).json({ message: 'Gagal memuat statistik kategori' })
+    }
+}
+
 // Controller untuk membuat data finance baru
 const createFinance = async (req, res) => {
     const { title, amount, type, category } = req.body;
@@ -47,24 +106,7 @@ const createFinance = async (req, res) => {
     }
 };
 
-const getCategoryStats = async (req, res) => {
-    try {
-        const finances = await Finance.find({ user: req.user.id })
 
-        const categoryStats = finances.reduce((acc, curr) => {
-            if (!acc[curr.category]) {
-                acc[curr.category] = { total: 0, count: 0 }
-            }
-            acc[curr.category].total += curr.amount
-            acc[curr.category].count += 1
-            return acc
-        }, {})
-
-        res.status(200).json(categoryStats)
-    } catch (error) {
-        res.status(500).json({message: 'Gagal memuat statistik kategori'})
-    }   
-}
 
 // Controller untuk mengupdate data finance
 const updateFinance = async (req, res) => {
@@ -118,7 +160,17 @@ const deleteFinance = async (req, res) => {
 const filterFinance = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { type, month, year } = req.query;
+        const {
+            type,
+            month,
+            year,
+            keyword,     // pencarian kata kunci di title atau category
+            category,    // filter kategori
+            minAmount,   // jumlah minimum
+            maxAmount,    // jumlah maksimum
+            startDate,    // dimulai
+            endDate       // sampai dengan
+        } = req.query;
 
         let query = { user: userId };
 
@@ -147,6 +199,25 @@ const filterFinance = async (req, res) => {
             query.createdAt.$gte = monthStart;
             query.createdAt.$lt = monthEnd;
         }
+
+        if (keyword) {
+            query.$or = [
+                { title: { $regex: keyword, $options: 'i' } },
+                { category: { $regex: keyword, $options: 'i' } },
+            ]
+        }
+
+        if (category) {
+            query.category = category;
+        }
+
+        if (startDate || endDate) {
+            query.createdAt 
+                if (startDate) query.createdAt.$gte = new Date(startDate)
+                if (endDate) query.createdAt.$lt = new Date(endDate)
+            
+        }
+
 
         const finances = await Finance.find(query).sort({ createdAt: -1 });
         res.status(200).json(finances);
@@ -178,4 +249,4 @@ const getFinanceSummary = async (req, res) => {
     }
 }
 
-module.exports = { getFinances, createFinance, updateFinance, deleteFinance, filterFinance, getFinanceSummary, getCategoryStats };
+module.exports = { getFinances, getMonthlyStats, createFinance, updateFinance, deleteFinance, filterFinance, getFinanceSummary, getCategoryStats };
