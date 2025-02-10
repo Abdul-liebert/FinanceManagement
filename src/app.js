@@ -20,9 +20,14 @@ const userRoutes = require('./routes/userRoutes');
 // Import Finance
 const financeRoutes = require('./routes/financeRoutes')
 
+// Import Reminder
+const reminderRoutes = require('./routes/reminderRoutes')
+
 // Use Routes
 app.use('/api/users', userRoutes);
 app.use('/api/finances', financeRoutes);
+app.use('/api/reminder', reminderRoutes);
+
 
 // PORT
 const PORT = process.env.PORT || 5000;
