@@ -22,7 +22,7 @@ router.get('/monthly-stats', protect, getMonthlyStats)
 
 router.get('/router', protect, getFinanceReportByPeriod)
 
-router.get('/filters', protect, filterFinance);
+router.get('/filter', protect, filterFinance);
 
 router.get('/summary', protect, getFinanceSummary);
 
